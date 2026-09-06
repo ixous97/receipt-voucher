@@ -24,17 +24,17 @@ __pycache__/
 venv/
 
 # 웹앱이 내려받아 쓰는 학습 데이터 (12MB, 첫 실행 때 받는다)
-web/**/*.traineddata
+docs/**/*.traineddata
 
 # 대조 시험이 만들어 내는 것들 (기준만들기.py 를 돌리면 다시 생긴다)
-web/검증/그림/
-web/검증/_*/
-web/검증/*.docx
-web/검증/*.pdf
-web/검증/차이.png
+docs/검증/그림/
+docs/검증/_*/
+docs/검증/*.docx
+docs/검증/*.pdf
+docs/검증/차이.png
 브라우저결과.b64
 .playwright-mcp/
-web/검증/영수증/
+docs/검증/영수증/
 
 # 실제 지출 금액이 담긴 정답표 (정답.예시.js 를 복사해 만든다)
-web/검증/정답.js
+docs/검증/정답.js

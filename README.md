@@ -62,7 +62,7 @@
 
 ```bash
 # 웹앱 — 서버가 필요합니다(모듈을 파일로 직접 열면 브라우저가 막습니다)
-python -m http.server 8765 --directory web
+python -m http.server 8765 --directory docs
 
 # 윈도우판
 python -m pip install -r requirements.txt
@@ -74,17 +74,24 @@ python src/main.py
 두 판이 **같은 문서**를 만들어야 합니다. 한쪽 규칙만 고치면 결과가 어긋납니다.
 
 ```bash
-python web/검증/기준만들기.py     # 파이썬으로 기준 문서 생성
-# 브라우저에서 web/검증/대조.html 을 열고 대조실행() 실행
-python web/검증/대조하기.py       # 두 문서를 항목별로 견줌
+python docs/검증/기준만들기.py     # 파이썬으로 기준 문서 생성
+# 브라우저에서 docs/검증/대조.html 을 열고 대조실행() 실행
+python docs/검증/대조하기.py       # 두 문서를 항목별로 견줌
 ```
 
-판독을 건드렸다면 `web/검증/채점.html` 로 정확도를 다시 재고, 윈도우판은
+판독을 건드렸다면 `docs/검증/채점.html` 로 정확도를 다시 재고, 윈도우판은
 `python 실측/재현검증.py` 로 원본 3건이 그대로 재현되는지 확인합니다.
 
 자세한 구조와 그동안 겪은 함정은 [CLAUDE.md](CLAUDE.md) 에 적어 두었습니다.
 
 ### 배포
 
-`main` 에 밀어 넣으면 `.github/workflows/pages.yml` 이 `web/` 을 GitHub Pages 로 올립니다.
-처음 한 번은 저장소 **Settings → Pages → Source** 를 **GitHub Actions** 로 바꿔 주세요.
+`main` 에 밀어 넣으면 GitHub Pages 가 `docs/` 를 그대로 게시합니다. 따로 할 일은 없습니다.
+
+> 웹앱이 `web/` 이 아니라 `docs/` 에 있는 것은 GitHub Pages 때문입니다.
+> Pages 는 저장소 뿌리 아니면 `docs/` 만 게시할 수 있고, 다른 폴더를 쓰려면
+> Actions 워크플로가 필요한데 그것은 토큰에 `workflow` 권한을 요구합니다.
+> 폴더 이름 하나로 그 복잡함을 없앴습니다.
+
+처음 한 번은 저장소 **Settings → Pages → Source** 를 **Deploy from a branch**,
+**Branch: main / docs** 로 맞춰 주세요.
