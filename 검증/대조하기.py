@@ -60,7 +60,7 @@ def 그림크기들(뿌리):
 기준경로 = 여기 / "기준.docx"
 브라우저경로 = 여기 / "브라우저.docx"
 
-b64 = (여기.parent.parent / "브라우저결과.b64").read_text().strip().strip('"')
+b64 = (여기.parent / "브라우저결과.b64").read_text().strip().strip('"')
 브라우저경로.write_bytes(base64.b64decode(b64))
 
 기준, 기준그림수 = 문서읽기(기준경로)

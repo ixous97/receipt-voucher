@@ -61,8 +61,10 @@
 ## 개발
 
 ```bash
-# 웹앱 — 서버가 필요합니다(모듈을 파일로 직접 열면 브라우저가 막습니다)
-python -m http.server 8765 --directory docs
+# 저장소 뿌리에서 서버를 띄웁니다(모듈을 파일로 직접 열면 브라우저가 막습니다)
+python -m http.server 8765
+#   웹앱   → http://127.0.0.1:8765/web-app/
+#   검증   → http://127.0.0.1:8765/검증/대조.html
 
 # 윈도우판
 python -m pip install -r requirements.txt
@@ -74,24 +76,40 @@ python src/main.py
 두 판이 **같은 문서**를 만들어야 합니다. 한쪽 규칙만 고치면 결과가 어긋납니다.
 
 ```bash
-python docs/검증/기준만들기.py     # 파이썬으로 기준 문서 생성
-# 브라우저에서 docs/검증/대조.html 을 열고 대조실행() 실행
-python docs/검증/대조하기.py       # 두 문서를 항목별로 견줌
+python 검증/기준만들기.py     # 파이썬으로 기준 문서 생성
+# 브라우저에서 검증/대조.html 을 열고 대조실행() 실행
+python 검증/대조하기.py       # 두 문서를 항목별로 견줌
 ```
 
-판독을 건드렸다면 `docs/검증/채점.html` 로 정확도를 다시 재고, 윈도우판은
+판독을 건드렸다면 `검증/채점.html` 로 정확도를 다시 재고, 윈도우판은
 `python 실측/재현검증.py` 로 원본 3건이 그대로 재현되는지 확인합니다.
 
 자세한 구조와 그동안 겪은 함정은 [CLAUDE.md](CLAUDE.md) 에 적어 두었습니다.
 
-### 배포
+### 배포 — Vercel
 
-`main` 에 밀어 넣으면 GitHub Pages 가 `docs/` 를 그대로 게시합니다. 따로 할 일은 없습니다.
+**Root Directory 를 `web-app` 으로 설정해야 합니다.** 그러지 않으면 Vercel 이 저장소 뿌리의
+`src/main.py`(PySide6 데스크톱 진입점)와 `requirements.txt` 를 보고 Python 프로젝트로
+감지해 `app` 변수를 찾다가 실패합니다.
 
-> 웹앱이 `web/` 이 아니라 `docs/` 에 있는 것은 GitHub Pages 때문입니다.
-> Pages 는 저장소 뿌리 아니면 `docs/` 만 게시할 수 있고, 다른 폴더를 쓰려면
-> Actions 워크플로가 필요한데 그것은 토큰에 `workflow` 권한을 요구합니다.
-> 폴더 이름 하나로 그 복잡함을 없앴습니다.
+```
+Framework Preset   Other
+Root Directory     web-app
+Build Command      (비움)
+Output Directory   (비움)
+Install Command    (비움)
+```
 
-처음 한 번은 저장소 **Settings → Pages → Source** 를 **Deploy from a branch**,
-**Branch: main / docs** 로 맞춰 주세요.
+`web-app/` 안에는 배포될 것만 둡니다 — HTML·JS·라이브러리·템플릿뿐이고 파이썬은 없습니다.
+서버가 필요 없는 정적 사이트라 백엔드도 빌드 과정도 없습니다.
+
+로컬에서 배포본을 그대로 확인하려면:
+
+```bash
+cd web-app && npx vercel build      # .vercel/output/static 에 배포될 것만 모입니다
+python -m http.server 8767 --directory web-app/.vercel/output/static
+```
+
+> **검증 도구를 `web-app/` 안에 두지 마세요.** 실제 영수증과 지출 금액 정답표가 들어 있어
+> 그대로 배포됩니다. `.vercelignore` 는 `vercel build` 단계에서 적용되지 않아 막아 주지 못합니다.
+> 그래서 폴더 자체를 밖으로 분리했습니다.

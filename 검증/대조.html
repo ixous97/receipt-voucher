@@ -6,10 +6,10 @@
    두 결과의 XML 구조가 같아야 이식이 옳다는 뜻이다.</p>
 <pre id="기록">준비 중…</pre>
 
-<script src="../vendor/jszip.min.js"></script>
+<script src="../web-app/vendor/jszip.min.js"></script>
 <script type="module">
-import { 결의서, 섹션, 영수증 } from "../js/모델.js";
-import { 만들기 } from "../js/docx생성.js";
+import { 결의서, 섹션, 영수증 } from "../web-app/js/모델.js";
+import { 만들기 } from "../web-app/js/docx생성.js";
 
 const 기록 = document.getElementById("기록");
 const 적기 = (줄) => { 기록.textContent += "\n" + 줄; };
@@ -50,7 +50,7 @@ window.대조실행 = async function () {
   적기(`왼쪽 ${왼.매수}장 → ${왼.가로칸수()}줄 × ${왼.세로칸수()}칸, 설명 '${왼.설명완성()}'`);
   적기(`오른쪽 ${오.매수}장 → ${오.가로칸수()}줄 × ${오.세로칸수()}칸, 설명 '${오.설명완성()}'`);
 
-  const 템플릿 = await (await fetch("../양식/결의서_템플릿.docx")).arrayBuffer();
+  const 템플릿 = await (await fetch("../web-app/양식/결의서_템플릿.docx")).arrayBuffer();
   const blob = await 만들기([결], 템플릿);
   적기(`문서 생성됨: ${(blob.size / 1024).toFixed(0)} KB`);
 

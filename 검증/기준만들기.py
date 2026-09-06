@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 여기 = Path(__file__).resolve().parent
-sys.path.insert(0, str(여기.parent.parent / "src" / "core"))
+sys.path.insert(0, str(여기.parent / "src" / "core"))
 
 from PIL import Image                       # noqa: E402
 

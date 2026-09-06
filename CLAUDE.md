@@ -11,19 +11,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **같은 일을 하는 두 벌이 있다.**
 
-| | 웹앱 (`docs/`) | 윈도우판 (`src/`) |
+| | 웹앱 (`web-app/`) | 윈도우판 (`src/`) |
 |---|---|---|
 | 판독 | Tesseract (WebAssembly) | Windows 내장 OCR |
 | 금액 정확도 | 10/12 (83%) | 11/12 (92%) |
-| 배포 | GitHub Pages — 고치면 즉시 반영 | exe 를 15명에게 다시 배포 |
+| 배포 | Vercel — 고치면 즉시 반영 | exe 를 15명에게 다시 배포 |
 | 자료 | 브라우저 밖으로 안 나감 | PC 밖으로 안 나감 |
 
-웹앱은 <https://ixous97.github.io/receipt-voucher/> 에 있다.
+웹앱 주소는 Vercel 이 내주는 것을 쓴다(배포한 뒤 여기 적을 것).
+한때 GitHub Pages 로도 띄웠으나, Pages 는 뿌리나 `docs/` 만 게시할 수 있어
+폴더 이름이 배포 수단에 묶이는 문제가 있었다. Vercel 은 Root Directory 를 지정할 수 있다.
 
 ## 중요한 원칙
 
-0. **두 벌의 규칙을 함께 고친다.** `docs/js/모델.js` 는 `src/core/모델.py` 를,
-   `docs/js/docx생성.js` 는 `src/core/문서생성.py` 를, `docs/js/판독.js`·`전처리.js` 는
+0. **두 벌의 규칙을 함께 고친다.** `web-app/js/모델.js` 는 `src/core/모델.py` 를,
+   `web-app/js/docx생성.js` 는 `src/core/문서생성.py` 를, `web-app/js/판독.js`·`전처리.js` 는
    `src/core/영수증판독.py`·`이미지정리.py` 를 옮긴 것이다. **한쪽만 고치면 같은 영수증으로
    서로 다른 문서가 나온다.** 고친 뒤에는 아래 '대조 시험'을 반드시 돌릴 것.
 1. **AI(유료 API)를 쓰지 않는다.** Windows 내장 OCR로 실측 92%를 확인했고, 15명 배포에서
@@ -40,7 +42,7 @@ python -m pip install -r requirements.txt     # 준비
 python src/main.py                            # 윈도우판 실행
 python src/main.py --자가진단 --표본 영수증    # 화면 없이 전 과정 점검
 
-python -m http.server 8765 --directory docs   # 웹앱 — 서버가 있어야 모듈이 뜬다
+python -m http.server 8765 --directory web-app   # 웹앱 — 서버가 있어야 모듈이 뜬다
 ```
 
 웹앱을 `file://` 로 열면 브라우저가 모듈 로딩을 막는다. 반드시 서버로 띄울 것.
@@ -50,16 +52,16 @@ python -m http.server 8765 --directory docs   # 웹앱 — 서버가 있어야 �
 **문서 생성 규칙을 고쳤다면 반드시 돌린다.** 같은 입력으로 두 판을 돌려 결과를 견준다.
 
 ```powershell
-python docs/검증/기준만들기.py     # 파이썬으로 기준 문서를 만든다
+python web-app/검증/기준만들기.py     # 파이썬으로 기준 문서를 만든다
 # 브라우저에서 http://127.0.0.1:8765/검증/대조.html 을 열고 대조실행() 실행
 #   → 결과가 브라우저결과.b64 로 떨어진다
-python docs/검증/대조하기.py       # 글자·표 격자·칸 병합·행 높이·그림 크기를 항목별로 견준다
+python web-app/검증/대조하기.py       # 글자·표 격자·칸 병합·행 높이·그림 크기를 항목별로 견준다
 ```
 
 마지막에 `두 문서의 구조가 완전히 같다` 가 나와야 한다. 인쇄 결과까지 픽셀 단위로
 같음을 확인한 상태이므로, 어긋나면 그것은 이식 실수다.
 
-판독 규칙을 고쳤다면 `docs/검증/채점.html` 로 정확도를 다시 잰다. 정답표(`정답.js`)는
+판독 규칙을 고쳤다면 `web-app/검증/채점.html` 로 정확도를 다시 잰다. 정답표(`정답.js`)는
 실제 지출 금액이라 저장소에 없다 — `정답.예시.js` 를 복사해 채워 쓴다.
 
 ### 회귀 테스트 — 원본이 정답지다
@@ -136,25 +138,61 @@ python -m PyInstaller --noconfirm --onefile --windowed `
 
 | 웹앱 | 짝이 되는 파이썬 | 다른 점 |
 |---|---|---|
-| `docs/js/모델.js` | `core/모델.py` | 없음. 값과 규칙이 1:1 |
-| `docs/js/docx생성.js` | `core/문서생성.py` | python-docx 가 없어 zip·관계파일·그림 XML 을 직접 조립 |
-| `docs/js/전처리.js` | `core/이미지정리.py` | PIL 대신 캔버스. 흐림은 `ctx.filter=blur()` 를 빌려 쓴다 |
-| `docs/js/판독.js` | `core/영수증판독.py` | 엔진만 Tesseract(WASM). 금액·날짜 규칙은 같다 |
-| `docs/js/앱.js` | `ui/메인창.py` | 화면 조작 방식만 다르다 |
+| `web-app/js/모델.js` | `core/모델.py` | 없음. 값과 규칙이 1:1 |
+| `web-app/js/docx생성.js` | `core/문서생성.py` | python-docx 가 없어 zip·관계파일·그림 XML 을 직접 조립 |
+| `web-app/js/전처리.js` | `core/이미지정리.py` | PIL 대신 캔버스. 흐림은 `ctx.filter=blur()` 를 빌려 쓴다 |
+| `web-app/js/판독.js` | `core/영수증판독.py` | 엔진만 Tesseract(WASM). 금액·날짜 규칙은 같다 |
+| `web-app/js/앱.js` | `ui/메인창.py` | 화면 조작 방식만 다르다 |
 
-`docs/vendor/` 에는 JSZip, Tesseract.js, 한국어 학습 데이터(12MB)가 들어 있다.
+`web-app/vendor/` 에는 JSZip, Tesseract.js, 한국어 학습 데이터(12MB)가 들어 있다.
 **학습 데이터가 빠지면 판독이 통째로 죽는다.** CDN 을 쓰지 않고 저장소에 둔 것은
 바깥 서비스가 멈춰도 프로그램이 계속 돌게 하기 위해서다.
 
 ### 폴더
 
 ```
+src/                     윈도우판 (core = 규칙, ui = 화면)
+web-app/                 웹앱. 이 폴더만 Vercel 에 배포된다
+  index.html js/ vendor/ 양식/   화면 / 코드 / 라이브러리·학습데이터 / 템플릿
+검증/                    대조 시험·채점 도구. **배포되지 않는다**
 양식/원본/               원본 양식 (읽기 전용, 44MB — 영수증 12장 포함)
 양식/결의서_템플릿.docx   원본에서 이미지를 뺀 빈 템플릿 (5.7KB)
 실측/                    OCR 정확도 측정 자료·보고서·회귀 테스트
 배포/                    나눠 줄 꾸러미 (exe + 사용설명서)
-산출물/ 영수증/          생성 결과 / 테스트 입력
+산출물/ 영수증/ 테스트/   생성 결과 / 테스트 입력 / 손으로 굴려 본 자료
 ```
+
+**`web-app/` 에는 배포될 것만 둔다.** 검증 도구를 그 안에 두면 실제 영수증과 지출 금액
+정답표가 그대로 배포된다. `.vercelignore` 는 `vercel build` 단계에서 적용되지 않아
+막아 주지 못한다 — 실제로 겪었다. **설정 파일을 믿지 말고 폴더를 나눌 것.**
+
+**저장소는 공개다** — <https://github.com/ixous97/receipt-voucher>.
+실제 회계 자료(영수증·산출물·원본 양식·배포 꾸러미)와 채점 정답표는 `.gitignore` 로 막혀 있다.
+새 파일을 둘 때 그것이 실제 지출 자료라면 반드시 무시 목록에 먼저 넣을 것.
+
+### 배포 — Vercel
+
+Vercel 프로젝트 설정에서 **Root Directory 를 `web-app` 으로** 두어야 한다. 그러지 않으면
+저장소 뿌리의 `src/main.py`(PySide6 진입점)와 `requirements.txt` 를 보고 Python 프로젝트로
+감지해 `app` 변수를 찾다가 실패한다 — 실제로 그 오류를 만났다.
+
+```
+Framework Preset   Other        Build Command     (비움)
+Root Directory     web-app      Output Directory  (비움)
+```
+
+서버가 필요 없는 정적 사이트다. 백엔드도 빌드 과정도 없다.
+배포될 파일은 열세 개뿐이며, 로컬에서 그대로 확인할 수 있다.
+
+```powershell
+cd web-app; npx vercel build          # .vercel/output/static 에 배포될 것만 모인다
+python -m http.server 8767 --directory web-app/.vercel/output/static
+```
+
+빌드 산출물에 `*.py` 나 영수증이 섞였다면 **배포하지 말 것.** 그건 폴더 분리가 무너졌다는 뜻이다.
+
+윈도우판은 여전히 exe 를 다시 만들어 나눠 줘야 한다. 그래서 급한 수정은 웹앱에 먼저 넣고,
+윈도우판은 모아서 내보내는 편이 낫다 — 단, **규칙을 고쳤다면 두 벌을 함께 고쳐야 한다**(원칙 0).
 
 ---
 
@@ -224,14 +262,19 @@ python -m PyInstaller --noconfirm --onefile --windowed `
 ### 웹앱
 
 - **lxml 의 `find`/`findall`(직계 자식)과 `iter`(후손 전부) 구분을 DOM 에서도 지켜야 한다.**
-  `docs/js/docx생성.js` 의 `자식들()`·`후손들()` 이 그 구분이다. 뭉뚱그려 후손 검색을 쓰면
+  `web-app/js/docx생성.js` 의 `자식들()`·`후손들()` 이 그 구분이다. 뭉뚱그려 후손 검색을 쓰면
   중첩표의 행까지 딸려 와 표가 망가진다.
 - **zip 안 파트 이름은 ASCII 로 둔다**(`image1.jpg`). 워드 규격이 권하는 바다.
 - 그림을 넣으려면 세 가지를 모두 해야 한다 — `word/media` 에 바이트 넣기, `document.xml.rels`
   에 관계 등록, 그 rId 를 가리키는 drawing XML 조립. 하나라도 빠지면 워드가 파일을 거부한다.
 - 글자를 쓸 때 `xml:space="preserve"` 를 반드시 붙인다. `( 지출인 :  )` 같은 앞뒤 공백이 사라진다.
-- **웹앱이 `docs/` 에 있는 것은 GitHub Pages 때문이다.** Pages 는 뿌리나 `docs/` 만 게시하고,
-  다른 폴더는 Actions 워크플로가 필요한데 그걸 올리려면 토큰에 `workflow` 권한이 있어야 한다.
+- **배포 폴더에는 배포될 것만 둔다.** 검증 도구를 `web-app/` 안에 두었더니 실제 영수증과
+  지출 금액 정답표가 빌드 산출물에 그대로 딸려 들어갔다. `.vercelignore` 는 `vercel build`
+  단계에서 적용되지 않는다. 설정 파일이 아니라 폴더 구조로 막을 것.
+- **확장자로 제외할 때 부정 패턴(`!`)을 믿지 말 것.** `.vercelignore` 에 `*.docx` 를 넣고
+  `!양식/*.docx` 로 되살리려 했는데 먹지 않아, 꼭 필요한 템플릿까지 빠져 문서 생성이 죽었다.
+- Vercel 은 저장소 뿌리에 `requirements.txt` 와 `src/main.py` 가 있으면 Python 프로젝트로
+  보고 `app` 변수를 찾는다. **Root Directory 를 `web-app` 으로 지정**하면 그 폴더만 본다.
 - 학습 데이터는 IndexedDB(`keyval-store`)에 캐시된다. 데이터를 바꿔 시험할 때는 지워야 새로 받는다.
 
 ---
