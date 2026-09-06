@@ -1,0 +1,47 @@
+# web/ 폴더를 GitHub Pages 로 올린다.
+#
+# Pages 는 저장소 뿌리나 /docs 만 그대로 게시할 수 있어서, web/ 을 쓰려면
+# 이렇게 따로 올려 줘야 한다. main 에 밀어 넣을 때마다 저절로 돌아간다.
+#
+# 처음 한 번은 GitHub 저장소 Settings → Pages → Source 를
+# "GitHub Actions" 로 바꿔 줘야 한다.
+
+name: 웹앱 배포
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:          # 손으로도 돌릴 수 있게
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:                  # 배포가 겹치면 나중 것만 살린다
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  배포:
+    environment:
+      name: github-pages
+      url: ${{ steps.올리기.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 판독기 학습 데이터가 들어 있는지 확인
+        # 12MB 짜리 파일이라 실수로 빠뜨리기 쉽다. 없으면 판독이 통째로 죽는다.
+        run: |
+          test -f web/vendor/학습데이터/kor.traineddata.gz \
+            || { echo "kor.traineddata.gz 가 없습니다"; exit 1; }
+          test -f web/양식/결의서_템플릿.docx \
+            || { echo "결의서_템플릿.docx 가 없습니다"; exit 1; }
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: 올리기
+        uses: actions/deploy-pages@v4

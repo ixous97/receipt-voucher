@@ -1,0 +1,92 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>브라우저 판독 채점</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; }
+  table { border-collapse: collapse; margin-top: 1rem; }
+  th, td { border: 1px solid #ccc; padding: .3rem .6rem; font-size: 14px; }
+  td.수 { text-align: right; font-variant-numeric: tabular-nums; }
+  .맞 { color: #0a0; } .틀 { color: #c00; }
+</style>
+<h1>브라우저 판독 채점</h1>
+<p>윈도우판과 <b>같은 영수증 12장</b>으로 채점한다.
+   견줄 기준 — 윈도우 내장 OCR 금액 11/12, 파이썬 Tesseract(psm4) 금액 11/12.</p>
+<p id="진행">준비됨</p>
+<table id="표"><thead><tr>
+  <th>파일</th><th>정답 금액</th><th>읽은 금액</th><th>근거</th>
+  <th>정답 날짜</th><th>읽은 날짜</th><th>후보에 있나</th><th>초</th>
+</tr></thead><tbody></tbody></table>
+
+<script src="../vendor/tesseract.min.js"></script>
+<script type="module">
+import { 전처리 } from "../js/전처리.js";
+import { 판독, 엔진준비 } from "../js/판독.js";
+
+const 정답금액 = {
+  "표1_01.jpg": 14000, "표1_02.jpg": 15000, "표1_03.jpg": 14960, "표1_04.jpg": 9900,
+  "표2_01.jpg": 16900, "표2_02.jpg": 70000,
+  "표3_01.jpg": 66200, "표3_02.jpg": 177000, "표3_03.jpg": 180000,
+  "표3_04.jpg": 43700, "표3_05.jpg": 66600, "표3_06.jpg": 101000,
+};
+const 정답날짜 = {
+  "표1_01.jpg": "0813", "표1_02.jpg": "0806", "표1_03.jpg": "0827", "표1_04.jpg": "0827",
+  "표2_01.jpg": "0827", "표2_02.jpg": "0808",
+  "표3_01.jpg": "0813", "표3_02.jpg": "0820", "표3_03.jpg": "0827",
+  "표3_04.jpg": "0903", "표3_05.jpg": "0903", "표3_06.jpg": "0827",
+};
+
+const 진행 = document.getElementById("진행");
+const 몸 = document.querySelector("#표 tbody");
+
+window.채점상태 = { 끝났나: false, 진행: "준비됨", 결과: null };
+
+window.채점시작 = async function () {
+  const 시작 = performance.now();
+  window.채점상태.진행 = "판독기 준비 중";
+  진행.textContent = "판독기 준비 중…";
+  await 엔진준비((말) => { 진행.textContent = 말; window.채점상태.진행 = 말; });
+
+  const 점수 = { 금액: 0, 날짜: 0, 후보포함: 0 };
+  const 줄들 = [];
+  const 이름들 = Object.keys(정답금액);
+
+  for (let i = 0; i < 이름들.length; i++) {
+    const 이름 = 이름들[i];
+    진행.textContent = `${i + 1}/${이름들.length}  ${이름} 읽는 중…`;
+    window.채점상태.진행 = 진행.textContent;
+
+    const 한장시작 = performance.now();
+    const blob = await (await fetch(`영수증/${이름}`)).blob();
+    const 판 = await 전처리(blob);
+    const 결 = await 판독(판);
+    const 걸린 = (performance.now() - 한장시작) / 1000;
+
+    const 금액맞 = 결.금액 === 정답금액[이름];
+    const 날짜맞 = 결.날짜 === 정답날짜[이름];
+    const 후보맞 = 결.후보.includes(정답금액[이름]);
+    점수.금액 += 금액맞; 점수.날짜 += 날짜맞; 점수.후보포함 += 후보맞;
+
+    줄들.push({ 이름, 읽은금액: 결.금액, 근거: 결.근거, 읽은날짜: 결.날짜,
+                금액맞, 날짜맞, 후보맞, 걸린: +걸린.toFixed(1) });
+
+    몸.insertAdjacentHTML("beforeend", `<tr>
+      <td>${이름}</td>
+      <td class="수">${정답금액[이름].toLocaleString()}</td>
+      <td class="수 ${금액맞 ? "맞" : "틀"}">${결.금액.toLocaleString()}</td>
+      <td>${결.근거}</td>
+      <td>${정답날짜[이름]}</td>
+      <td class="${날짜맞 ? "맞" : "틀"}">${결.읽은날짜 ?? 결.날짜 ?? "-"}</td>
+      <td class="${후보맞 ? "맞" : "틀"}">${후보맞 ? "있음" : "없음"}</td>
+      <td class="수">${걸린.toFixed(1)}</td></tr>`);
+  }
+
+  const 총초 = (performance.now() - 시작) / 1000;
+  진행.textContent =
+    `끝 — 금액 ${점수.금액}/12, 날짜 ${점수.날짜}/12, 후보포함 ${점수.후보포함}/12 ` +
+    `(총 ${총초.toFixed(0)}초)`;
+  window.채점상태 = {
+    끝났나: true, 진행: 진행.textContent,
+    결과: { 점수, 줄들, 총초: +총초.toFixed(0) },
+  };
+};
+</script>

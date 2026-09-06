@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지출결의서 증빙 만들기</title>
+<style>
+  :root {
+    --글자: #1a1a1a; --흐린글자: #666; --바탕: #fff; --판: #f6f6f7;
+    --선: #d8d8dc; --강조: #1f5fbf; --경고: #c0392b; --좋음: #1e8449;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --글자: #e8e8ea; --흐린글자: #9a9aa0; --바탕: #17171a; --판: #202024;
+      --선: #35353c; --강조: #6ea8fe; --경고: #ff7b6b; --좋음: #6fcf97;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Malgun Gothic", system-ui, sans-serif;
+    color: var(--글자); background: var(--바탕); font-size: 14px;
+  }
+  header {
+    display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
+    padding: .7rem 1rem; border-bottom: 1px solid var(--선); background: var(--판);
+    position: sticky; top: 0; z-index: 10;
+  }
+  h1 { font-size: 1rem; margin: 0 1rem 0 0; white-space: nowrap; }
+  label { color: var(--흐린글자); margin-left: .5rem; }
+  input, button, select {
+    font: inherit; color: inherit; background: var(--바탕);
+    border: 1px solid var(--선); border-radius: 5px; padding: .3rem .5rem;
+  }
+  button { cursor: pointer; background: var(--판); }
+  button:hover:not(:disabled) { border-color: var(--강조); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.주 { background: var(--강조); color: #fff; border-color: var(--강조); font-weight: 600; }
+  main { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; padding: 1rem; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+
+  #미리보기칸 {
+    position: sticky; top: 4.2rem; align-self: start;
+    border: 1px solid var(--선); border-radius: 8px; padding: .6rem;
+    background: var(--판); text-align: center; min-height: 200px;
+  }
+  #미리보기칸 img { max-width: 100%; max-height: 60vh; border-radius: 4px; }
+  #미리보기이름 { color: var(--흐린글자); font-size: 12px; margin-top: .4rem;
+                  word-break: break-all; }
+
+  #떨구는곳 {
+    border: 2px dashed var(--선); border-radius: 8px; padding: 2rem 1rem;
+    text-align: center; color: var(--흐린글자); margin-bottom: 1rem;
+  }
+  #떨구는곳.닿음 { border-color: var(--강조); color: var(--강조); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border-bottom: 1px solid var(--선); padding: .35rem .4rem; text-align: left; }
+  th { color: var(--흐린글자); font-weight: 600; font-size: 12px; }
+  tr.고른것 { background: color-mix(in srgb, var(--강조) 14%, transparent); }
+  tr.쪽머리 td {
+    background: var(--판); font-weight: 600; border-bottom: 1px solid var(--선);
+  }
+  td.수 { text-align: right; font-variant-numeric: tabular-nums; }
+  td input { width: 100%; border: 1px solid transparent; background: transparent; }
+  td input:hover { border-color: var(--선); }
+  td input:focus { border-color: var(--강조); background: var(--바탕); }
+  td input.금액 { text-align: right; font-variant-numeric: tabular-nums; }
+  .확인단추 { border: none; background: none; font-size: 15px; padding: 0 .3rem; }
+  .경고 { color: var(--경고); }
+  .좋음 { color: var(--좋음); }
+
+  footer {
+    position: sticky; bottom: 0; display: flex; gap: .6rem; align-items: center;
+    flex-wrap: wrap; padding: .6rem 1rem; border-top: 1px solid var(--선);
+    background: var(--판);
+  }
+  #합계 { font-weight: 700; margin-right: auto; }
+  #알림 { color: var(--흐린글자); font-size: 13px; }
+  #문제들 {
+    margin: 0 1rem 1rem; padding: .6rem .9rem; border-radius: 6px;
+    border: 1px solid var(--경고); color: var(--경고); display: none;
+  }
+  #문제들 ul { margin: .3rem 0 0; padding-left: 1.1rem; }
+  .안내 { color: var(--흐린글자); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>지출결의서 증빙 만들기</h1>
+  <button id="파일고르기">영수증 고르기</button>
+  <input type="file" id="파일입력" accept="image/*" multiple hidden>
+  <label for="부서명">부서명</label>
+  <input id="부서명" size="22" value="위드지저스미니스트리(WJM)">
+  <label for="날짜">날짜</label>
+  <input id="날짜" type="date">
+  <label for="지출인">지출인</label>
+  <input id="지출인" size="8" placeholder="이름">
+</header>
+
+<main>
+  <div>
+    <div id="미리보기칸">
+      <div class="안내">영수증을 고르면 여기에 크게 보입니다</div>
+      <div id="미리보기이름"></div>
+    </div>
+  </div>
+
+  <div>
+    <div id="떨구는곳">
+      영수증 사진을 여기로 끌어다 놓거나, <b>Ctrl + V</b> 로 붙여넣으세요<br>
+      <span class="안내">화면 캡처는 윈도우 키 + Shift + S</span>
+    </div>
+    <table id="표">
+      <thead><tr>
+        <th style="width:38%">설명 / 영수증</th>
+        <th style="width:14%">금액</th>
+        <th style="width:9%">날짜</th>
+        <th style="width:7%">쪽</th>
+        <th style="width:7%">확인</th>
+        <th style="width:25%">근거</th>
+      </tr></thead>
+      <tbody id="몸"></tbody>
+    </table>
+  </div>
+</main>
+
+<div id="문제들"></div>
+
+<footer>
+  <span id="합계">영수증 0매 · 0원 · 문서 0장</span>
+  <button id="앞으로" disabled>◀ 앞쪽으로</button>
+  <button id="뒤로" disabled>뒤쪽으로 ▶</button>
+  <button id="빼기" disabled>목록에서 빼기</button>
+  <button id="읽기" disabled>영수증 읽기</button>
+  <button id="만들기" class="주" disabled>워드 문서 만들기</button>
+  <span id="알림"></span>
+</footer>
+
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/tesseract.min.js"></script>
+<script type="module" src="js/앱.js"></script>
+</body>
+</html>

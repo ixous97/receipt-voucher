@@ -34,3 +34,4 @@ web/검증/*.pdf
 web/검증/차이.png
 브라우저결과.b64
 .playwright-mcp/
+web/검증/영수증/
