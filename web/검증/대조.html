@@ -1,0 +1,66 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>docx생성.js 대조 시험</title>
+<h1>docx생성.js 대조 시험</h1>
+<p>기준만들기.py 와 <b>똑같은 구성</b>으로 브라우저에서 문서를 만든다.
+   두 결과의 XML 구조가 같아야 이식이 옳다는 뜻이다.</p>
+<pre id="기록">준비 중…</pre>
+
+<script src="../vendor/jszip.min.js"></script>
+<script type="module">
+import { 결의서, 섹션, 영수증 } from "../js/모델.js";
+import { 만들기 } from "../js/docx생성.js";
+
+const 기록 = document.getElementById("기록");
+const 적기 = (줄) => { 기록.textContent += "\n" + 줄; };
+
+/** 파이썬 기준과 같은 영수증 여섯 장을 읽어 온다. */
+async function 영수증들읽기() {
+  const 것들 = [];
+  for (let i = 1; i <= 6; i++) {
+    const 이름 = `시험${i}.jpg`;
+    const 답 = await fetch(`그림/${이름}`);
+    const 버퍼 = await 답.arrayBuffer();
+    const 그림 = await createImageBitmap(new Blob([버퍼]));
+    const r = new 영수증({
+      이름, 자료: new Uint8Array(버퍼), 폭: 그림.width, 높이: 그림.height,
+    });
+    r.확인필요 = false;
+    것들.push(r);
+  }
+  return 것들;
+}
+
+window.대조실행 = async function () {
+  기록.textContent = "실행 중…";
+  const 것들 = await 영수증들읽기();
+
+  // 왼쪽 4장(두 줄로 쪼개짐) + 오른쪽 2장(한 줄) — 가장 까다로운 배치
+  const 왼 = new 섹션("스텝 식대", 것들.slice(0, 4));
+  왼.영수증들.forEach((r) => { r.금액 = 12000; r.날짜 = "0813"; });
+  const 오 = new 섹션("스튜디오 대여", 것들.slice(4));
+  오.영수증들.forEach((r) => { r.금액 = 90000; r.날짜 = "0827"; });
+
+  const 결 = new 결의서();
+  결.날짜 = "2026년 9월 4일";
+  결.지출인 = "홍길동";
+  결.항목들 = [왼, 오];
+
+  적기(`총금액 ${결.총금액.toLocaleString()}원 / ${결.매수}매`);
+  적기(`왼쪽 ${왼.매수}장 → ${왼.가로칸수()}줄 × ${왼.세로칸수()}칸, 설명 '${왼.설명완성()}'`);
+  적기(`오른쪽 ${오.매수}장 → ${오.가로칸수()}줄 × ${오.세로칸수()}칸, 설명 '${오.설명완성()}'`);
+
+  const 템플릿 = await (await fetch("../양식/결의서_템플릿.docx")).arrayBuffer();
+  const blob = await 만들기([결], 템플릿);
+  적기(`문서 생성됨: ${(blob.size / 1024).toFixed(0)} KB`);
+
+  // 파이썬 쪽에서 뜯어볼 수 있도록 통째로 돌려준다
+  const 버퍼 = await blob.arrayBuffer();
+  let 이진 = "";
+  const 바이트 = new Uint8Array(버퍼);
+  for (let i = 0; i < 바이트.length; i++) 이진 += String.fromCharCode(바이트[i]);
+  return btoa(이진);
+};
+
+기록.textContent = "준비됨. 대조실행() 을 부르면 된다.";
+</script>
