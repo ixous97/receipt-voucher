@@ -1,0 +1,12 @@
+# 지출결의서 증빙 만들기 — 필요한 꾸러미
+# 설치: python -m pip install -r requirements.txt
+
+PySide6          # 화면
+python-docx      # 워드 문서 만들기
+Pillow           # 이미지 열기·크기 조절·OCR 전처리
+pillow-heif      # 아이폰 사진(HEIC) 읽기
+winsdk           # Windows 내장 한국어 OCR 호출
+pdfplumber       # PDF 전자영수증에서 글자 뽑기
+pypdfium2        # PDF를 이미지로 (스캔본 PDF용)
+pywin32          # 설치된 Word로 PDF 변환 (결과 확인용, 없어도 문서 생성은 됨)
+pyinstaller      # exe로 묶을 때만 필요
