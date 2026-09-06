@@ -17,6 +17,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 금액 정확도 | 10/12 (83%) | 11/12 (92%) |
 | 배포 | Vercel — 고치면 즉시 반영 | exe 를 15명에게 다시 배포 |
 | 자료 | 브라우저 밖으로 안 나감 | PC 밖으로 안 나감 |
+| 판독 시점 | 넣으면 곧바로 | [영수증 읽기] 를 눌러야 |
+| HEIC(아이폰) | 못 읽는다 — 까닭을 알린다 | 읽는다 (pillow-heif) |
 
 웹앱 주소는 Vercel 이 내주는 것을 쓴다(배포한 뒤 여기 적을 것).
 한때 GitHub Pages 로도 띄웠으나, Pages 는 뿌리나 `docs/` 만 게시할 수 있어
