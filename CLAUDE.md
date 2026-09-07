@@ -170,8 +170,9 @@ web-app/                 웹앱. 이 폴더만 Vercel 에 배포된다
 ```
 
 **`web-app/` 에는 배포될 것만 둔다.** 검증 도구를 그 안에 두면 실제 영수증과 지출 금액
-정답표가 그대로 배포된다. `.vercelignore` 는 `vercel build` 단계에서 적용되지 않아
-막아 주지 못한다 — 실제로 겪었다. **설정 파일을 믿지 말고 폴더를 나눌 것.**
+정답표가 그대로 배포된다. `.vercelignore` 는 지금 CLI(59.11.7)에서는 `vercel build` 에도
+적용되지만(2026-09-07 실측), 패턴 하나 잘못 쓰면 필요한 파일까지 지운다 —
+**설정 파일을 믿지 말고 폴더를 나눌 것.** 그물은 그물일 뿐이다.
 
 **저장소는 공개다** — <https://github.com/ixous97/receipt-voucher>.
 실제 회계 자료(영수증·산출물·원본 양식·배포 꾸러미)와 채점 정답표는 `.gitignore` 로 막혀 있다.
@@ -189,6 +190,11 @@ Root Directory     web-app      Output Directory  (비움)
 ```
 
 서버가 필요 없는 정적 사이트다. 백엔드도 빌드 과정도 없다.
+
+`vercel.json` 이 **보안 헤더**를 모든 경로에 붙인다 — CSP·`X-Content-Type-Options`·
+`Referrer-Policy`·`Permissions-Policy`·`COOP`. CSP 의 `connect-src 'self'` 가
+"영수증이 브라우저를 벗어나지 않는다"를 문서가 아니라 **브라우저가 강제하게** 만든다.
+헤더를 고쳤다면 배포 전에 반드시 브라우저로 전 과정을 굴려 볼 것(아래).
 배포될 파일은 열세 개뿐이며, 로컬에서 그대로 확인할 수 있다.
 
 ```powershell
@@ -276,10 +282,19 @@ python -m http.server 8767 --directory web-app/.vercel/output/static
   에 관계 등록, 그 rId 를 가리키는 drawing XML 조립. 하나라도 빠지면 워드가 파일을 거부한다.
 - 글자를 쓸 때 `xml:space="preserve"` 를 반드시 붙인다. `( 지출인 :  )` 같은 앞뒤 공백이 사라진다.
 - **배포 폴더에는 배포될 것만 둔다.** 검증 도구를 `web-app/` 안에 두었더니 실제 영수증과
-  지출 금액 정답표가 빌드 산출물에 그대로 딸려 들어갔다. `.vercelignore` 는 `vercel build`
-  단계에서 적용되지 않는다. 설정 파일이 아니라 폴더 구조로 막을 것.
-- **확장자로 제외할 때 부정 패턴(`!`)을 믿지 말 것.** `.vercelignore` 에 `*.docx` 를 넣고
-  `!양식/*.docx` 로 되살리려 했는데 먹지 않아, 꼭 필요한 템플릿까지 빠져 문서 생성이 죽었다.
+  지출 금액 정답표가 빌드 산출물에 그대로 딸려 들어갔다. 설정 파일이 아니라 폴더 구조로 막을 것.
+- **`.vercelignore` 에서 `.docx` 를 확장자로 막지 말 것.** `*.docx` 도, 뿌리 고정을 노린
+  `/*.docx` 도 `양식/결의서_템플릿.docx` 까지 함께 지워 문서 생성이 죽는다 — **둘 다 겪었다.**
+  `.gitignore` 와 달리 앞의 `/` 를 뿌리 고정으로 보지 않고, 부정 패턴(`!`)으로 되살리는 것도
+  먹지 않는다. 그래서 앱이 내려주는 이름(`*지출결의서증빙.docx`, `앱.js:337`)만 콕 집어 막는다.
+- **`.vercelignore` 는 `vercel build` 에도 적용된다**(CLI 59.11.7 실측). 예전에 적어 둔
+  "빌드 단계에서는 안 먹는다"는 옛 CLI 이야기다. 고칠 때마다 `npx vercel build` 로
+  **산출물 13개**(index.html·js 5·vendor 6·양식 1)를 눈으로 확인할 것.
+- **`vercel.json` 은 주석 키(`"//"`)를 거부한다.** `headers[0]` 에 넣었더니
+  `Invalid vercel.json - should NOT have additional property` 로 빌드가 실패했다. 설명은 여기 적을 것.
+- **CSP 를 조일 때 판독이 조용히 죽는다.** `script-src` 의 `'wasm-unsafe-eval'`(Tesseract WASM),
+  `blob:`(워커), `worker-src blob:` 중 하나만 빠져도 OCR 이 통째로 멈춘다. `COEP` 는 넣지 않는다.
+  `connect-src 'self'` 가 이 앱의 핵심이다 — 영수증을 밖으로 보낼 통로를 브라우저가 막는다.
 - Vercel 은 저장소 뿌리에 `requirements.txt` 와 `src/main.py` 가 있으면 Python 프로젝트로
   보고 `app` 변수를 찾는다. **Root Directory 를 `web-app` 으로 지정**하면 그 폴더만 본다.
 - 학습 데이터는 IndexedDB(`keyval-store`)에 캐시된다. 데이터를 바꿔 시험할 때는 지워야 새로 받는다.
