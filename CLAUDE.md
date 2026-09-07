@@ -180,16 +180,43 @@ web-app/                 웹앱. 이 폴더만 Vercel 에 배포된다
 
 ### 배포 — Vercel
 
+**실사용 프로젝트는 `receipt-voucher` 하나다** → `receipt-voucher-khaki.vercel.app`.
+같은 저장소에 붙은 Vercel 프로젝트가 넷인데(`receipt-voucher`, `web-app`,
+`receipt-voucher2`, `receipt-voucher2-dby9`) **나머지 셋은 아무것도 띄우지 않는다(404).**
+`web-app` 은 Git 연동이 살아 있어 푸시할 때마다 같이 빌드될 뿐이다.
+`vercel link` 가 엉뚱하게 `web-app` 에 걸려 프리뷰가 다른 데로 간 적이 있으니,
+작업 전에 `.vercel/project.json` 의 `projectName` 이 **`receipt-voucher`** 인지 볼 것.
+
 Vercel 프로젝트 설정에서 **Root Directory 를 `web-app` 으로** 두어야 한다. 그러지 않으면
 저장소 뿌리의 `src/main.py`(PySide6 진입점)와 `requirements.txt` 를 보고 Python 프로젝트로
 감지해 `app` 변수를 찾다가 실패한다 — 실제로 그 오류를 만났다.
+**대시보드에는 아직 Framework Preset 이 Python, Install Command 가
+`pip install -r requirements.txt` 로 남아 있다.** 그래서 `vercel.json` 에
+`installCommand: "npm install"` 을 적어 못 박았다 — `vercel.json` 이 대시보드를 이긴다.
 
 ```
-Framework Preset   Other        Build Command     (비움)
-Root Directory     web-app      Output Directory  (비움)
+Root Directory     web-app      Build Command     (비움)
 ```
 
-서버가 필요 없는 정적 사이트다. 백엔드도 빌드 과정도 없다.
+거의 정적 사이트다. 서버가 하는 일은 **문지기 하나뿐**이고(`web-app/middleware.js`),
+`@vercel/functions` 때문에 배포에 `npm install` 단계가 붙는다.
+**영수증은 여전히 브라우저를 벗어나지 않는다** — 미들웨어는 들여보낼지만 정하고 자료는 만지지 않는다.
+
+### 문 — 비밀번호로 잠겨 있다
+
+내부용이라 아는 사람만 들어온다. 주소를 열면 브라우저가 기본 로그인 창을 띄운다
+(**아이디는 검사하지 않는다**. 담당자에게는 `wjm` 으로 안내한다).
+
+Vercel 의 Password Protection 은 Enterprise 이거나 **Pro 위에 월 $150 애드온**이고,
+Hobby 의 무료 Vercel Authentication 은 프로덕션 도메인을 지키지 못한다(문서 명시).
+그 기능의 실체가 공유 비밀번호 게이트라 같은 것을 미들웨어로 직접 만들었다 —
+Hobby 무료 한도(월 100만 호출) 안이고 우리 트래픽은 월 수백 건이다.
+
+**비밀번호는 저장소에 없다.** 저장소가 공개라 Vercel 환경변수 `WEBAPP_PASSWORD` 에서만 읽는다
+(Production·Preview·Development 셋 다, Secret 으로). 키가 영문인 것은 Vercel 이 ASCII 만 받기
+때문이며 이 프로젝트에서 한글 규칙을 벗어나는 유일한 곳이다.
+**값이 없으면 열지 않고 막는다** — 설정을 빠뜨려 공개되는 편이 더 나쁘다.
+환경변수를 바꾸면 **재배포해야 반영된다**(`vercel redeploy <배포URL>`).
 
 `vercel.json` 이 **보안 헤더**를 모든 경로에 붙인다 — CSP·`X-Content-Type-Options`·
 `Referrer-Policy`·`Permissions-Policy`·`COOP`. CSP 의 `connect-src 'self'` 가
@@ -298,6 +325,18 @@ python -m http.server 8767 --directory web-app/.vercel/output/static
 - Vercel 은 저장소 뿌리에 `requirements.txt` 와 `src/main.py` 가 있으면 Python 프로젝트로
   보고 `app` 변수를 찾는다. **Root Directory 를 `web-app` 으로 지정**하면 그 폴더만 본다.
 - 학습 데이터는 IndexedDB(`keyval-store`)에 캐시된다. 데이터를 바꿔 시험할 때는 지워야 새로 받는다.
+- **`WWW-Authenticate` 의 `realm` 은 ASCII 여야 한다.** HTTP 헤더 값은 latin-1(ByteString)이라
+  한글을 넣으면 `Response` 생성 단계에서 `TypeError` 로 죽는다 — 실제로 겪었다.
+  **본문은 UTF-8 이라 한글을 써도 된다.**
+- **프레임워크 없는 미들웨어는 `@vercel/functions` 의 `next()` 로 통과시켜야 한다.**
+  그러려면 `package.json` 에 `"type": "module"` 이 있어야 한다(둘 다 Vercel 문서 명시).
+  `next()` 를 안 쓰면 정적 파일로 넘어가지 않는다.
+- **`vercel.json` 은 주석 키(`"//"`)를 거부한다.** `headers[0]` 에 설명을 달았더니
+  `Invalid vercel.json - should NOT have additional property` 로 빌드가 실패했다.
+- **`vercel dev` 는 한글 경로를 404 로 돌려준다. 이것은 로컬 에뮬레이터의 흠이다.**
+  실제 Vercel 에서는 미들웨어를 지나서도 `/js/앱.js`·`/양식/결의서_템플릿.docx`·
+  `/vendor/학습데이터/*` 가 전부 200 이다(프리뷰로 확인했다). **로컬 404 를 보고 파일명을
+  ASCII 로 바꾸려 들지 말 것.**
 
 ---
 
