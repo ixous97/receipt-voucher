@@ -38,6 +38,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. **원본 양식(`양식/원본/2026 지출결의 양식.docx`)은 읽기 전용이다.** 실제 업무 자료이자
    회귀 테스트의 정답지다. 수정하거나 옮기지 말 것.
 
+## 어디서 작업하는가 — 워크트리와 브랜치
+
+**배포 브랜치는 `main` 이다.** 웹앱 작업은 `.claude/worktrees/webapp` 워크트리에서 해 왔다.
+메인 체크아웃의 `master` 는 **16커밋 뒤처진 낡은 가지**이고 그쪽 `CLAUDE.md` 는 웹앱을 아예 모른다 —
+메인 폴더를 열었다면 먼저 `git log --oneline -1` 로 어느 가지인지 확인할 것.
+
+**워크트리에는 실제 회계 자료가 없다.** git 이 추적하는 것만 들어 있어서
+`실측/`·`양식/원본/`·`영수증/`·`산출물/`·`배포/` 가 통째로 빠져 있다(전부 `.gitignore` 대상).
+그래서 아래 명령이 **어디서 도는지가 갈린다**:
+
+| 하는 일 | 도는 곳 |
+|---|---|
+| 웹앱 고치기·배포, 대조 시험(`검증/`) | 워크트리 또는 메인, 아무 데나 |
+| **회귀 테스트(`실측/재현검증.py`·`채점2.py`)** | **메인 체크아웃에서만** — 워크트리엔 `실측/` 이 없다 |
+| 원본 양식을 읽는 일, exe 빌드 | **메인 체크아웃에서만** — `양식/원본/` 이 없다 |
+
+워크트리에서 회귀 테스트를 돌리면 `FileNotFoundError` 가 난다. 코드가 깨진 게 아니다.
+
 ## 개발 명령
 
 ```powershell
@@ -150,6 +168,7 @@ python -m PyInstaller --noconfirm --onefile --windowed `
 | `web-app/js/전처리.js` | `core/이미지정리.py` | PIL 대신 캔버스. 흐림은 `ctx.filter=blur()` 를 빌려 쓴다 |
 | `web-app/js/판독.js` | `core/영수증판독.py` | 엔진만 Tesseract(WASM). 금액·날짜 규칙은 같다 |
 | `web-app/js/앱.js` | `ui/메인창.py` | 화면 조작 방식만 다르다 |
+| `web-app/middleware.js` | **없음** | 웹앱에만 있는 문지기. 비밀번호를 확인해 들여보낸다 |
 
 `web-app/vendor/` 에는 JSZip, Tesseract.js, 한국어 학습 데이터(12MB)가 들어 있다.
 **학습 데이터가 빠지면 판독이 통째로 죽는다.** CDN 을 쓰지 않고 저장소에 둔 것은
@@ -331,8 +350,6 @@ python -m http.server 8767 --directory web-app/.vercel/output/static
 - **프레임워크 없는 미들웨어는 `@vercel/functions` 의 `next()` 로 통과시켜야 한다.**
   그러려면 `package.json` 에 `"type": "module"` 이 있어야 한다(둘 다 Vercel 문서 명시).
   `next()` 를 안 쓰면 정적 파일로 넘어가지 않는다.
-- **`vercel.json` 은 주석 키(`"//"`)를 거부한다.** `headers[0]` 에 설명을 달았더니
-  `Invalid vercel.json - should NOT have additional property` 로 빌드가 실패했다.
 - **`vercel dev` 는 한글 경로를 404 로 돌려준다. 이것은 로컬 에뮬레이터의 흠이다.**
   실제 Vercel 에서는 미들웨어를 지나서도 `/js/앱.js`·`/양식/결의서_템플릿.docx`·
   `/vendor/학습데이터/*` 가 전부 200 이다(프리뷰로 확인했다). **로컬 404 를 보고 파일명을
